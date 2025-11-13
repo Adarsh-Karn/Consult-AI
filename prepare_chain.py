@@ -1,22 +1,49 @@
-from langchain.chains import ConversationalRetrievalChain
-from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.memory import ConversationBufferMemory
+# retriever_setup.py
+
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables import RunnablePassthrough
+
+# -------------------------------------
+# Prepare Chain (Replaces ConversationalRetrievalChain)
+# -------------------------------------
 
 def load_prepare_chain(llm, prepare_retriever):
+
+    # ---- LCEL Prompt ----
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a consulting coach. Use the following context to help answer the user's question."),
-        HumanMessagePromptTemplate.from_template("Context:\n{context}\n\nQuestion: {question}")
+        ("system",
+        """
+        You are a consulting coach. Use ONLY the retrieved context below to help answer the user's question.
+        If the context does not contain the answer, say that the information is not available.
+        Be concise, structured, and clear.
+        """),
+        MessagesPlaceholder("chat_history"),
+        ("system", "Retrieved context:\n{context}"),
+        ("human", "{question}")
     ])
 
-    memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True
+    # ---- How to combine retrieved docs ----
+    def combine_docs(docs):
+        return "\n\n".join(d.page_content for d in docs)
+
+    # ---- Retrieval + Prompt + LLM Pipeline ----
+    pipeline = {
+        "context": prepare_retriever | combine_docs,
+        "question": RunnablePassthrough()
+    } | prompt | llm | StrOutputParser()
+
+    # ---- New Memory Wrapper ----
+    def get_memory(session_id: str):
+        return InMemoryChatMessageHistory()
+
+    chain_with_memory = RunnableWithMessageHistory(
+        pipeline,
+        get_memory,
+        input_messages_key="question",
+        history_messages_key="chat_history"
     )
 
-    return ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=prepare_retriever,
-        memory=memory,
-        combine_docs_chain_kwargs={"prompt": prompt},
-        verbose=True
-    )
+    return chain_with_memory

@@ -1,19 +1,27 @@
 # ingest_documents.py
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.docstore.document import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+
+# Vectorstore
 from langchain_community.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
+
+# Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
 
 # 1. Load PDF
-loader = PyPDFLoader(r"C:\Users\DIVYA\Desktop\LANGCHAIN\Case In Point- CaseBook.pdf")
+loader = PyPDFLoader(r"C:\Users\guita\OneDrive\Desktop\ConsultAI\data\Case-in-Point.pdf")
 pages = loader.load()
 
 # 2. Split text
-splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=100,
+)
 
-# 3. Manual section tagging based on page numbers
+# Manual section tagging for different chains
 PART_PAGE_RANGES = {
     "prepare_yourself": range(10, 69),
     "learning": range(69, 130),
@@ -22,15 +30,18 @@ PART_PAGE_RANGES = {
 
 structured_docs = []
 
+# 3. Structure documents
 for i, page in enumerate(pages):
     text = page.page_content
     part = "general"
-    
+
+    # Tag each page with a “section/part”
     for tag, page_range in PART_PAGE_RANGES.items():
         if i in page_range:
             part = tag
             break
 
+    # Split page into chunks
     chunks = splitter.split_text(text)
 
     for j, chunk in enumerate(chunks):
@@ -39,17 +50,19 @@ for i, page in enumerate(pages):
             metadata={
                 "page_number": i + 1,
                 "part": part,
-                "source": "Case in Point",
+                "source": "Case In Point",
                 "chunk_id": f"page_{i+1}_chunk_{j}"
             }
         ))
 
-print("✅ Structured docs created:", len(structured_docs))
+print("✅ Structured documents created:", len(structured_docs))
 
-# 4. Create vectorstore
+# 4. Create embedding model
 embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+
+# 5. Create vector store
 vectorstore = FAISS.from_documents(structured_docs, embedding)
 
-# 5. Save to disk
+# 6. Save vector store
 vectorstore.save_local("faiss_index")
-print("✅ FAISS vector store saved to 'faiss_index'")
+print("✅ FAISS vectorstore saved to 'faiss_index'")

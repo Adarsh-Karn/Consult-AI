@@ -1,41 +1,49 @@
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import PromptTemplate
-from retriever_setup import case_prep_retriever  # ← Your retriever setup
-from llm_file import llm 
+# case_examples.py
 
-# 🧠 Prompt template for extracting useful examples
-example_prompt = PromptTemplate(
-    input_variables=["context", "question"],
-    template="""
-You are a consulting trainer. A candidate has asked for real case examples to understand how business cases are structured and handled.
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.runnables import RunnablePassthrough
 
-Use the following context extracted from a consulting casebook (primarily real case examples) to:
-- Provide relevant cases.
-- Highlight the type of business issue tackled.
-- Mention industries if applicable.
-- Give concise summaries with key lessons or approach.
+from retriever_setup import case_prep_retriever
+from llm_file import llm
 
-Context:
-{context}
+# ------------------ Prompt Template ------------------
 
-User Question:
-{question}
+example_prompt = ChatPromptTemplate.from_messages([
+    ("system",
+    """
+    You are a consulting trainer. A candidate wants real case examples to understand how business cases are structured.
 
-Answer:"""
-)
+    Use the retrieved context from consulting casebooks to:
+    - Provide relevant case examples.
+    - Mention industries involved.
+    - Highlight business issues tackled.
+    - Give short summaries with key lessons or frameworks.
+    """),
+    MessagesPlaceholder("chat_history"),
+    ("system", "Retrieved context:\n{context}"),
+    ("human", "{question}")
+])
 
-# 🧠 Memory for maintaining chat flow
-def load_case_examples_chain(llm, case_example_retriever):
-    memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True
-    )
+# ------------------ LCEL Chain Builder ------------------
 
-    return ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=case_example_retriever,
-        memory=memory,
-        combine_docs_chain_kwargs={"prompt": example_prompt},
-        verbose=True
-    )
+def load_case_examples_chain():
+
+    # 1. Define how documents are combined
+    def combine_docs(docs):
+        """Join retrieved docs into a single context block."""
+        return "\n\n".join([d.page_content for d in docs])
+
+    # 2. LCEL retrieval pipeline
+    retrieval_pipeline = {
+        "context": case_prep_retriever | combine_docs,
+        "question": RunnablePassthrough()
+    } | example_prompt | llm | StrOutputParser()
+
+    # 3. Attach modern memory wrapper
+    def get_memory(session_id: str):
+        return InMemoryChatMessageHistory()
+
+    chain_with_memory = Runnabl

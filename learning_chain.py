@@ -1,38 +1,62 @@
 # learning_chain.py
 
-from langchain.prompts import PromptTemplate
-from langchain.chains import ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
-from retriever_setup import learning_retriever  # ← Your retriever setup
-from llm_file import llm  # ← Your LLM (e.g., from ChatGroq or OpenAI)
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnableWithMessageHistory
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.chat_history import InMemoryChatMessageHistory
+
+from retriever_setup import learning_retriever
+from llm_file import llm
+
 
 def load_learning_chain(llm, learning_retriever):
+    # Prompt used when combining retrieved documents
     combine_prompt = PromptTemplate(
         input_variables=["context", "question"],
         template="""
 You are a consulting tutor helping a candidate understand core consulting concepts.
 
 Use the following context to answer the user's question.
+
 Context:
 {context}
 
 Question: {question}
-Answer:"""
+
+Answer:
+"""
     )
 
-    memory = ConversationBufferMemory(
-        memory_key="chat_history",
-        return_messages=True
+    # ⭐ LCEL Chain: Retriever → Prompt → LLM → Response
+    chain = (
+        learning_retriever
+        | (lambda docs: {
+            "context": "\n\n".join(d.page_content for d in docs),
+            "question": None   # Filled later by history wrapper
+        })
+        | combine_prompt
+        | llm
     )
 
-    return ConversationalRetrievalChain.from_llm(
-        llm=llm,
-        retriever=learning_retriever,
-        memory=memory,
-        combine_docs_chain_kwargs={"prompt": combine_prompt},
-        verbose=True
-    )
-print("SUCESSSSSS")
+    # ⭐ Store chat history per session
+    store = {}
 
-# ✅ Export
-__all__ = ["learning_chain"]
+    def get_history(session_id: str):
+        if session_id not in store:
+            store[session_id] = InMemoryChatMessageHistory()
+        return store[session_id]
+
+    # ⭐ Wrap chain with automatic chat-memory (replacement for ConversationBufferMemory)
+    conversational_chain = RunnableWithMessageHistory(
+        chain,
+        get_history,
+        input_messages_key="question",
+        history_messages_key="history",
+    )
+
+    return conversational_chain
+
+
+print("SUCCESS")
+
+__all__ = ["load_learning_chain"]
