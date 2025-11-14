@@ -46,4 +46,11 @@ def load_case_examples_chain():
     def get_memory(session_id: str):
         return InMemoryChatMessageHistory()
 
-    chain_with_memory = Runnabl
+    chain_with_memory = RunnableWithMessageHistory(
+        retrieval_pipeline,
+        get_memory,
+        input_messages_key="question",
+        history_messages_key="chat_history"
+    )
+
+    return chain_with_memory

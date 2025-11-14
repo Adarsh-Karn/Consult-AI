@@ -17,15 +17,15 @@ vectorstore = FAISS.load_local(
 
 # Prepare retrievers using metadata filtering
 prepare_retriever = vectorstore.as_retriever(
-    search_kwargs={"filter": {"part": "prepare_yourself"}}
+    search_kwargs={"k":3,"filter": {"part": "prepare_yourself"}}
 )
 
 learning_retriever = vectorstore.as_retriever(
-    search_kwargs={"filter": {"part": "learning"}}
+    search_kwargs={"k":3,"filter": {"part": "learning"}}
 )
 
 case_prep_retriever = vectorstore.as_retriever(
-    search_kwargs={"filter": {"part": "case_prep"}}
+    search_kwargs={"k":3,"filter": {"part": "case_prep"}}
 )
 
 print("✅ Retrievers loaded and filtered successfully.")
