@@ -1,10 +1,10 @@
 # learning_chain.py
 
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableWithMessageHistory
+from langchain_core.runnables import RunnableWithMessageHistory,RunnablePassthrough,RunnableMap
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.chat_history import InMemoryChatMessageHistory
-
+from langchain_core.output_parsers import StrOutputParser
 from retriever_setup import learning_retriever
 from llm_file import llm
 
@@ -29,14 +29,22 @@ Answer:
 
     # ⭐ LCEL Chain: Retriever → Prompt → LLM → Response
     chain = (
-        learning_retriever
-        | (lambda docs: {
-            "context": "\n\n".join(d.page_content for d in docs),
-            "question": None   # Filled later by history wrapper
-        })
-        | combine_prompt
-        | llm
-    )
+    RunnableMap({
+        "question": RunnablePassthrough()
+    })
+    | (lambda x: {
+        "docs": learning_retriever.invoke(x["question"]),
+        "question": x["question"]
+    })
+    | (lambda x: {
+        "context": "\n\n".join(d.page_content for d in x["docs"]),
+        "question": x["question"]
+    })
+    | combine_prompt
+    | llm
+    | StrOutputParser()
+)
+
 
     # ⭐ Store chat history per session
     store = {}

@@ -38,7 +38,8 @@ def load_case_examples_chain():
 
     # 2. LCEL retrieval pipeline
     retrieval_pipeline = {
-        "context": case_prep_retriever | combine_docs,
+        "context": (lambda x: x["question"])
+        |case_prep_retriever | combine_docs,
         "question": RunnablePassthrough()
     } | example_prompt | llm | StrOutputParser()
 

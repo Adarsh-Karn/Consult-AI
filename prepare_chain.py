@@ -4,7 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough, RunnableMap
 
 # -------------------------------------
 # Prepare Chain (Replaces ConversationalRetrievalChain)
@@ -30,11 +30,16 @@ def load_prepare_chain(llm, prepare_retriever):
         return "\n\n".join(d.page_content for d in docs)
 
     # ---- Retrieval + Prompt + LLM Pipeline ----
-    pipeline = {
-        "context": prepare_retriever | combine_docs,
-        "question": RunnablePassthrough()
-    } | prompt | llm | StrOutputParser()
-
+    pipeline = (
+        RunnableMap({
+            "question": RunnablePassthrough(),
+            "chat history": RunnablePassthrough()
+        })|RunnableMap({
+            "context": (lambda x: x["question"]) | prepare_retriever | combine_docs,
+            "question": RunnablePassthrough(),
+            "chat history": RunnablePassthrough()
+        })|prompt|llm|StrOutputParser()
+    )
     # ---- New Memory Wrapper ----
     def get_memory(session_id: str):
         return InMemoryChatMessageHistory()
