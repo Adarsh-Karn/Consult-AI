@@ -1,10 +1,13 @@
 # learning_chain.py
 
+from operator import itemgetter
 from langchain_core.prompts import PromptTemplate
-from langchain_core.runnables import RunnableWithMessageHistory,RunnablePassthrough,RunnableMap
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableMap
+from langchain_core.runnables import RunnableWithMessageHistory
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.chat_history import InMemoryChatMessageHistory
-from langchain_core.output_parsers import StrOutputParser
+
 from retriever_setup import learning_retriever
 from llm_file import llm
 
@@ -28,23 +31,19 @@ Answer:
     )
 
     # ⭐ LCEL Chain: Retriever → Prompt → LLM → Response
-    chain = (
-    RunnableMap({
-        "question": RunnablePassthrough()
-    })
-    | (lambda x: {
-        "docs": learning_retriever.invoke(x["question"]),
-        "question": x["question"]
-    })
-    | (lambda x: {
-        "context": "\n\n".join(d.page_content for d in x["docs"]),
-        "question": x["question"]
-    })
-    | combine_prompt
-    | llm
-    | StrOutputParser()
-)
+    # Fixed: Properly pass question to retriever and combine docs
+    def combine_docs(docs):
+        return "\n\n".join(d.page_content for d in docs)
 
+    chain = (
+        {
+            "context": itemgetter("question") | learning_retriever | combine_docs,
+            "question": itemgetter("question")
+        }
+        | combine_prompt
+        | llm
+        | StrOutputParser() # type: ignore
+    )
 
     # ⭐ Store chat history per session
     store = {}

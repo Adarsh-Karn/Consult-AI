@@ -1,10 +1,11 @@
-# retriever_setup.py
+# prepare_chain.py
 
+from operator import itemgetter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.runnables import RunnablePassthrough, RunnableMap
+from langchain_core.runnables import RunnablePassthrough
 
 # -------------------------------------
 # Prepare Chain (Replaces ConversationalRetrievalChain)
@@ -30,19 +31,23 @@ def load_prepare_chain(llm, prepare_retriever):
         return "\n\n".join(d.page_content for d in docs)
 
     # ---- Retrieval + Prompt + LLM Pipeline ----
+    # Fixed: Use RunnablePassthrough.assign to add context while preserving inputs
     pipeline = (
-        RunnableMap({
-            "question": RunnablePassthrough(),
-            "chat history": RunnablePassthrough()
-        })|RunnableMap({
-            "context": (lambda x: x["question"]) | prepare_retriever | combine_docs,
-            "question": RunnablePassthrough(),
-            "chat history": RunnablePassthrough()
-        })|prompt|llm|StrOutputParser()
+        RunnablePassthrough.assign(
+            context=itemgetter("question") | prepare_retriever | combine_docs
+        )
+        | prompt
+        | llm
+        | StrOutputParser()
     )
-    # ---- New Memory Wrapper ----
+
+    # ---- Persistent Memory Store ----
+    store = {}
+
     def get_memory(session_id: str):
-        return InMemoryChatMessageHistory()
+        if session_id not in store:
+            store[session_id] = InMemoryChatMessageHistory()
+        return store[session_id]
 
     chain_with_memory = RunnableWithMessageHistory(
         pipeline,

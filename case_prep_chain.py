@@ -55,10 +55,14 @@ def load_case_prep_chain():
     # ---- LCEL Pipeline ----
     pipeline = prompt | llm | StrOutputParser()
 
-    # ---- Memory Wrapper (Replaces ConversationBufferMemory) ----
+    # ---- Persistent Memory Store ----
+    store = {}
+
     def get_memory(session_id: str):
         """Each user session gets its own conversation history."""
-        return InMemoryChatMessageHistory()
+        if session_id not in store:
+            store[session_id] = InMemoryChatMessageHistory()
+        return store[session_id]
 
     chain_with_memory = RunnableWithMessageHistory(
         pipeline,
@@ -68,4 +72,5 @@ def load_case_prep_chain():
     )
 
     return chain_with_memory
-__all__=["load_case_prep_chain"]
+
+__all__ = ["load_case_prep_chain"]
