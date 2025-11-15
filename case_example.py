@@ -36,15 +36,24 @@ def load_case_examples_chain():
         """Join retrieved docs into a single context block."""
         return "\n\n".join([d.page_content for d in docs])
 
-    # 2. LCEL retrieval pipeline
-    retrieval_pipeline = {
-        "context": case_prep_retriever | combine_docs,
-        "question": RunnablePassthrough()
-    } | example_prompt | llm | StrOutputParser()
+    # 2. LCEL retrieval pipeline - Fixed to properly pass question to retriever
+    retrieval_pipeline = (
+        {
+            "context": itemgetter("question") | case_prep_retriever | combine_docs,
+            "question": itemgetter("question")
+        }
+        | example_prompt
+        | llm
+        | StrOutputParser()
+    )
 
-    # 3. Attach modern memory wrapper
+    # 3. Persistent Memory Store
+    store = {}
+
     def get_memory(session_id: str):
-        return InMemoryChatMessageHistory()
+        if session_id not in store:
+            store[session_id] = InMemoryChatMessageHistory()
+        return store[session_id]
 
     chain_with_memory = RunnableWithMessageHistory(
         retrieval_pipeline,

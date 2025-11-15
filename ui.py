@@ -93,9 +93,12 @@ with tab1:
     # Submit logic
     if st.button("Ask", key="prep_submit") and user_q1:
         with st.spinner("Thinking..."):
-            result = prepare_chain.invoke({"question": user_q1})
+            result = prepare_chain.invoke(
+                {"question": user_q1},
+                config={"configurable": {"session_id": "prepare_session"}}
+            )
             st.session_state.chat_history_prepare.append(("You", user_q1))
-            st.session_state.chat_history_prepare.append(("Coach", result["answer"]))
+            st.session_state.chat_history_prepare.append(("Coach", result))
 
     # Optional Reset button
     if st.button("Reset Chat", key="reset_prepare"):
@@ -125,11 +128,12 @@ with tab2:
     
     if not st.session_state.case_started:
         if st.button("Start Interview"):
-            intro = case_prep_chain.invoke({
-                "input": f"Start the case interview. Case type: {case_choice}. Prompt: {case_types[case_choice]}"
-            })
+            intro = case_prep_chain.invoke(
+                {"input": f"Start the case interview. Case type: {case_choice}. Prompt: {case_types[case_choice]}"},
+                config={"configurable": {"session_id": "case_prep_session"}}
+            )
             st.session_state.case_started = True
-            st.session_state.interview_history.append(("🤖", intro["response"]))
+            st.session_state.interview_history.append(("🤖", intro))
 
     if st.session_state.case_started:
         for speaker, msg in st.session_state.interview_history:
@@ -138,15 +142,19 @@ with tab2:
         user_input = st.text_input("🧑 You:", key="case_input_tab2")
         if st.button("Send Response", key="send_response_tab2"):
             st.session_state.interview_history.append(("🧑", user_input))
-            result = case_prep_chain.invoke({"input": user_input})
-            st.session_state.interview_history.append(("🤖", result["response"]))
+            result = case_prep_chain.invoke(
+                {"input": user_input},
+                config={"configurable": {"session_id": "case_prep_session"}}
+            )
+            st.session_state.interview_history.append(("🤖", result))
 
         if st.button("End Interview"):
-            feedback = case_prep_chain.invoke({
-                "input": "Please evaluate my case interview performance."
-            })
+            feedback = case_prep_chain.invoke(
+                {"input": "Please evaluate my case interview performance."},
+                config={"configurable": {"session_id": "case_prep_session"}}
+            )
             st.markdown("### 🧠 Interviewer Feedback")
-            st.write(feedback["response"])
+            st.write(feedback)
             st.session_state.case_started = False
             st.session_state.interview_history.clear()
 
@@ -171,9 +179,12 @@ with tab3:
 
     if st.button("Ask", key="learn_submit") and user_q3:
         with st.spinner("Thinking..."):
-            result = learning_chain.invoke({"question": user_q3})
+            result = learning_chain.invoke(
+                {"question": user_q3},
+                config={"configurable": {"session_id": "learning_session"}}
+            )
             st.session_state.chat_history_learning.append(("You", user_q3))
-            st.session_state.chat_history_learning.append(("Tutor", result["answer"]))
+            st.session_state.chat_history_learning.append(("Tutor", result))
 
     if st.button("Reset Chat", key="reset_learning"):
         st.session_state.chat_history_learning = []
@@ -203,9 +214,12 @@ with tab4:
 
     if st.button("Fetch Example", key="case_submit_tab4"):
         with st.spinner("Retrieving relevant case..."):
-            result = case_example_chain.invoke({"question": user_q4})
+            result = case_example_chain.invoke(
+                {"question": user_q4},
+                config={"configurable": {"session_id": "case_examples_session"}}
+            )
             st.session_state.chat_history_case_examples.append(("You", user_q4))
-            st.session_state.chat_history_case_examples.append(("Trainer", result["answer"]))
+            st.session_state.chat_history_case_examples.append(("Trainer", result))
 
     if st.button("Reset Chat", key="reset_case"):
         st.session_state.chat_history_case_examples = []

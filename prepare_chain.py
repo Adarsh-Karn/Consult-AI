@@ -1,10 +1,11 @@
-# retriever_setup.py
+# prepare_chain.py
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.runnables import RunnablePassthrough
+from operator import itemgetter
 
 # -------------------------------------
 # Prepare Chain (Replaces ConversationalRetrievalChain)
@@ -30,14 +31,24 @@ def load_prepare_chain(llm, prepare_retriever):
         return "\n\n".join(d.page_content for d in docs)
 
     # ---- Retrieval + Prompt + LLM Pipeline ----
-    pipeline = {
-        "context": prepare_retriever | combine_docs,
-        "question": RunnablePassthrough()
-    } | prompt | llm | StrOutputParser()
+    # Fixed: Use itemgetter to properly extract "question" and pass it to retriever
+    pipeline = (
+        {
+            "context": itemgetter("question") | prepare_retriever | combine_docs,
+            "question": itemgetter("question")
+        }
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
 
-    # ---- New Memory Wrapper ----
+    # ---- Persistent Memory Store ----
+    store = {}
+
     def get_memory(session_id: str):
-        return InMemoryChatMessageHistory()
+        if session_id not in store:
+            store[session_id] = InMemoryChatMessageHistory()
+        return store[session_id]
 
     chain_with_memory = RunnableWithMessageHistory(
         pipeline,
@@ -47,3 +58,5 @@ def load_prepare_chain(llm, prepare_retriever):
     )
 
     return chain_with_memory
+
+__all__ = ["load_prepare_chain"]
