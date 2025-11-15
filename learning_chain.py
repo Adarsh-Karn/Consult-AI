@@ -28,14 +28,18 @@ Answer:
     )
 
     # ⭐ LCEL Chain: Retriever → Prompt → LLM → Response
+    # Fixed: Properly pass question to retriever and combine docs
+    def combine_docs(docs):
+        return "\n\n".join(d.page_content for d in docs)
+
     chain = (
-        learning_retriever
-        | (lambda docs: {
-            "context": "\n\n".join(d.page_content for d in docs),
-            "question": None   # Filled later by history wrapper
-        })
+        {
+            "context": itemgetter("question") | learning_retriever | combine_docs,
+            "question": itemgetter("question")
+        }
         | combine_prompt
         | llm
+        | StrOutputParser()
     )
 
     # ⭐ Store chat history per session
