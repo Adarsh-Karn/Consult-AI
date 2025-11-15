@@ -1,11 +1,11 @@
 # prepare_chain.py
 
+from operator import itemgetter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.runnables import RunnablePassthrough
-from operator import itemgetter
 
 # -------------------------------------
 # Prepare Chain (Replaces ConversationalRetrievalChain)
@@ -31,12 +31,11 @@ def load_prepare_chain(llm, prepare_retriever):
         return "\n\n".join(d.page_content for d in docs)
 
     # ---- Retrieval + Prompt + LLM Pipeline ----
-    # Fixed: Use itemgetter to properly extract "question" and pass it to retriever
+    # Fixed: Use RunnablePassthrough.assign to add context while preserving inputs
     pipeline = (
-        {
-            "context": itemgetter("question") | prepare_retriever | combine_docs,
-            "question": itemgetter("question")
-        }
+        RunnablePassthrough.assign(
+            context=itemgetter("question") | prepare_retriever | combine_docs
+        )
         | prompt
         | llm
         | StrOutputParser()
@@ -58,5 +57,3 @@ def load_prepare_chain(llm, prepare_retriever):
     )
 
     return chain_with_memory
-
-__all__ = ["load_prepare_chain"]

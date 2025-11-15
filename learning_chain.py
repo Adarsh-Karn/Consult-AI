@@ -1,6 +1,9 @@
 # learning_chain.py
 
+from operator import itemgetter
 from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableMap
 from langchain_core.runnables import RunnableWithMessageHistory
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.chat_history import InMemoryChatMessageHistory
@@ -39,7 +42,7 @@ Answer:
         }
         | combine_prompt
         | llm
-        | StrOutputParser()
+        | StrOutputParser() # type: ignore
     )
 
     # ⭐ Store chat history per session

@@ -1,5 +1,6 @@
 # case_examples.py
 
+from operator import itemgetter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.chat_history import InMemoryChatMessageHistory
@@ -30,18 +31,18 @@ example_prompt = ChatPromptTemplate.from_messages([
 # ------------------ LCEL Chain Builder ------------------
 
 def load_case_examples_chain():
+    from operator import itemgetter  # Ensure itemgetter is available in function scope
 
     # 1. Define how documents are combined
     def combine_docs(docs):
         """Join retrieved docs into a single context block."""
         return "\n\n".join([d.page_content for d in docs])
 
-    # 2. LCEL retrieval pipeline - Fixed to properly pass question to retriever
+    # 2. LCEL retrieval pipeline - Fixed to use RunnablePassthrough.assign to preserve inputs
     retrieval_pipeline = (
-        {
-            "context": itemgetter("question") | case_prep_retriever | combine_docs,
-            "question": itemgetter("question")
-        }
+        RunnablePassthrough.assign(
+            context=itemgetter("question") | case_prep_retriever | combine_docs
+        )
         | example_prompt
         | llm
         | StrOutputParser()
