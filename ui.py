@@ -64,9 +64,9 @@ st.title("🤖 ConsultBot – Your Case Interview Coach")
 
 # Load chains
 prepare_chain = load_prepare_chain(llm, prepare_retriever)
-case_prep_chain = load_case_prep_chain(llm)
+case_prep_chain = load_case_prep_chain()
 learning_chain = load_learning_chain(llm, learning_retriever)
-case_example_chain = load_case_examples_chain(llm, case_prep_retriever)
+case_example_chain = load_case_examples_chain()
 
 # App Tabs
 tab1, tab2, tab3, tab4 = st.tabs(["💼 Prepare Yourself", "🎯 Case Prep", "📘 Learning", "🧠 Case Examples"])
@@ -111,7 +111,7 @@ with tab1:
 
 # --- Tab 2: Case Prep Simulation ---
 with tab2:
-    st.subheader("🎯 Mock Case Interview")
+    st.subheader(" Mock Case Interview")
     case_types = {
         "Profitability": "A retail chain has seen a 15% drop in net profits...",
         "Market Entry": "A European beverage company wants to enter the Indian market...",
@@ -153,16 +153,16 @@ with tab2:
                 {"input": "Please evaluate my case interview performance."},
                 config={"configurable": {"session_id": "case_prep_session"}}
             )
-            st.markdown("### 🧠 Interviewer Feedback")
+            st.markdown("###  Interviewer Feedback")
             st.write(feedback)
             st.session_state.case_started = False
             st.session_state.interview_history.clear()
 
 # --- Tab 3: Learning Module ---
 with tab3:
-    st.subheader("📘 Learn Consulting Concepts")
+    st.subheader(" Learn Consulting Concepts")
 
-    st.markdown("💡 **Try asking:**")
+    st.markdown(" **Try asking:**")
     st.markdown("""
     - What is the Ivy Case System?
     - Explain a profitability framework.
@@ -196,8 +196,8 @@ with tab3:
 
 # --- Tab 4: Case Examples ---
 with tab4:
-    st.subheader("🧾 Real Case Examples")
-    st.markdown("💡 **Try asking:**")
+    st.subheader(" Real Case Examples")
+    st.markdown(" **Try asking:**")
     st.markdown("""
         - Give me an example of a Market Entry case.
         - Can you show me a Partner Case from the book?

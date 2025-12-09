@@ -8,7 +8,6 @@ from langchain_core.runnables import RunnablePassthrough
 
 from llm_file import llm  # Your LLM
 
-# ------------------ Case Prompts ------------------
 
 case_prompts = {
     "Profitability": "A retail chain has seen a 15% drop in net profits...",
@@ -17,7 +16,6 @@ case_prompts = {
     "Growth Strategy": "A SaaS company wants to increase revenue by 30% in 2 years..."
 }
 
-# ------------------ LCEL Case Prep Chain ------------------
 
 def load_case_prep_chain():
 
@@ -45,21 +43,17 @@ def load_case_prep_chain():
       - Final verdict: Pass / Needs Improvement
     """
 
-    # ---- LCEL Prompt ----
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         MessagesPlaceholder("chat_history"),
         ("human", "{input}")
     ])
 
-    # ---- LCEL Pipeline ----
     pipeline = prompt | llm | StrOutputParser()
 
-    # ---- Persistent Memory Store ----
     store = {}
 
     def get_memory(session_id: str):
-        """Each user session gets its own conversation history."""
         if session_id not in store:
             store[session_id] = InMemoryChatMessageHistory()
         return store[session_id]

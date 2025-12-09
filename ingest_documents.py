@@ -1,27 +1,20 @@
-# ingest_documents.py
-
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-
-# Vectorstore
 from langchain_community.vectorstores import FAISS
-
-# Embeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 
-
-# 1. Load PDF
+# Loading the Local data to be read
 loader = PyPDFLoader(r"C:\Users\guita\OneDrive\Desktop\ConsultAI\data\Case-in-Point.pdf")
 pages = loader.load()
 
-# 2. Split text
+# Text Spliting into chars 
 splitter = RecursiveCharacterTextSplitter(
     chunk_size=1000,
     chunk_overlap=100,
 )
 
-# Manual section tagging for different chains
+# Manual section tagging 
 PART_PAGE_RANGES = {
     "prepare_yourself": range(10, 69),
     "learning": range(69, 130),
@@ -30,7 +23,7 @@ PART_PAGE_RANGES = {
 
 structured_docs = []
 
-# 3. Structure documents
+# Building the Structure documents
 for i, page in enumerate(pages):
     text = page.page_content
     part = "general"
@@ -55,7 +48,7 @@ for i, page in enumerate(pages):
             }
         ))
 
-print("✅ Structured documents created:", len(structured_docs))
+print(" Structured documents created:", len(structured_docs))
 
 # 4. Create embedding model
 embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -65,4 +58,4 @@ vectorstore = FAISS.from_documents(structured_docs, embedding)
 
 # 6. Save vector store
 vectorstore.save_local("faiss_index")
-print("✅ FAISS vectorstore saved to 'faiss_index'")
+print(" FAISS vectorstore saved to 'faiss_index'")

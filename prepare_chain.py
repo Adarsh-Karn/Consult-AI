@@ -1,5 +1,3 @@
-# prepare_chain.py
-
 from operator import itemgetter
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers import StrOutputParser
@@ -7,13 +5,10 @@ from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 
-# -------------------------------------
-# Prepare Chain (Replaces ConversationalRetrievalChain)
-# -------------------------------------
 
 def load_prepare_chain(llm, prepare_retriever):
 
-    # ---- LCEL Prompt ----
+    #LCEL Prompt
     prompt = ChatPromptTemplate.from_messages([
         ("system",
         """
@@ -26,7 +21,7 @@ def load_prepare_chain(llm, prepare_retriever):
         ("human", "{question}")
     ])
 
-    # ---- How to combine retrieved docs ----
+    #combining retrieved docs
     def combine_docs(docs):
         return "\n\n".join(d.page_content for d in docs)
 

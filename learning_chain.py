@@ -30,8 +30,7 @@ Answer:
 """
     )
 
-    # ⭐ LCEL Chain: Retriever → Prompt → LLM → Response
-    # Fixed: Properly pass question to retriever and combine docs
+    
     def combine_docs(docs):
         return "\n\n".join(d.page_content for d in docs)
 
@@ -45,7 +44,7 @@ Answer:
         | StrOutputParser() # type: ignore
     )
 
-    # ⭐ Store chat history per session
+    
     store = {}
 
     def get_history(session_id: str):
@@ -53,7 +52,6 @@ Answer:
             store[session_id] = InMemoryChatMessageHistory()
         return store[session_id]
 
-    # ⭐ Wrap chain with automatic chat-memory (replacement for ConversationBufferMemory)
     conversational_chain = RunnableWithMessageHistory(
         chain,
         get_history,
